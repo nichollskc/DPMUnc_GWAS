@@ -1,4 +1,4 @@
-setwd("docs/PhD/UncertaintyClustering/Burren/")
+library(dplyr)
 
 save_subset <- function(rows_to_keep, dir_name) {                                                                          
   delta = reshape(df[rows_to_keep, c("PC", "delta", "label")], idvar="label", timevar = "PC", direction = "wide")
