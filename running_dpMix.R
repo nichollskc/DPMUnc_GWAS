@@ -21,6 +21,6 @@ if (length(args)==1) {
 obsData = read_matrix(paste0("data/", dataset, "/beta.tsv"))
 obsVars = read_matrix(paste0("data/", dataset, "/var.tsv"))
 
-directory = paste0("results_shorter/", dataset, "/seed", seed)
+directory = paste0("results/", dataset, "/seed", seed)
 dir.create(directory, recursive=TRUE)
-dpMix(obsData, obsVars, saveFileDir=directory, unique_id=seed, nIts=10000000)
+dpMix(obsData, obsVars, saveFileDir=directory, unique_id=seed, nIts=100000000, thinningFreq=100)
