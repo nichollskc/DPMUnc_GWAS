@@ -96,6 +96,7 @@ psm_plots <- function(dataset, datasets, name, focus_dataset=NULL) {
     mclust_solution <- Mclust(obsData, x=BIC)
 
     annotations = get_ann_colors(calls$cl, mclust_solution$classification, obsData)
+    annotations$ann$Var.PC1 = obsVars[, 1]
     psm_heatmap = pheatmap(bigpsm,
                            show_rownames = TRUE,
                            show_colnames = FALSE,
@@ -155,6 +156,7 @@ psm_plots <- function(dataset, datasets, name, focus_dataset=NULL) {
                            filename=paste0("plots/obs_heatmap_", name, ".png"))
 
     customColours = generate_balanced_colours(obsVars)
+    annotations$ann$Var.PC1 = NULL
     obs_vars_heatmap = pheatmap(obsVars,
                            clustering_method="complete",
                            cluster_row= psm_heatmap$tree_row,
