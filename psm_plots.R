@@ -162,20 +162,22 @@ psm_plots <- function(dataset, datasets, name, focus_dataset=NULL) {
                            breaks = customColours$breaks,
                            filename=paste0("plots/obs_heatmap_", name, ".png"))
 
-    customColours = generate_balanced_colours(obsVars)
-    obs_vars_heatmap = pheatmap(obsVars,
-                           clustering_method="complete",
-                           cluster_rows = hclust.comp,
-                           cluster_col = FALSE,
-                           annotation_colors = annotations$colors,
-                           annotation_row = annotations$ann,
-                           color = customColours$colours,
-                           fontsize_col = 8,
-                           fontsize_row = 6,
-                           width=9,
-                           height = 14,
-                           breaks = customColours$breaks,
-                           filename=paste0("plots/obs_vars_heatmap_", name, ".png"))
+    if (!grepl("novar", name)) {
+        customColours = generate_balanced_colours(obsVars)
+        obs_vars_heatmap = pheatmap(obsVars,
+                                    clustering_method="complete",
+                                    cluster_rows = hclust.comp,
+                                    cluster_col = FALSE,
+                                    annotation_colors = annotations$colors,
+                                    annotation_row = annotations$ann,
+                                    color = customColours$colours,
+                                    fontsize_col = 8,
+                                    fontsize_row = 6,
+                                    width=9,
+                                    height = 14,
+                                    breaks = customColours$breaks,
+                                    filename=paste0("plots/obs_vars_heatmap_", name, ".png"))
+    }
 
     heatmaps = lapply(psms, function(x) pheatmap(x,
                                                  legend=FALSE,
@@ -222,10 +224,18 @@ burren_heatmaps <- function(directory) {
 
   dataset = "with_subtypes_001"
   datasets = paste0("./trimmed_results/", dataset, "/seed", 1001:1010) 
-  psm_plots(dataset, datasets, name=dataset)
+#  psm_plots(dataset, datasets, name=dataset)
 
   dataset = "with_subtypes_noGA_001"
   datasets = paste0("./results/", dataset, "/seed", 1001:1010) 
+ # psm_plots(dataset, datasets, name=dataset)
+
+  dataset = "with_subtypes_noGA_001_novar"
+  datasets = paste0("./trimmed_results/", dataset, "/seed", 1001:1010) 
+  psm_plots(dataset, datasets, name=dataset)
+
+  dataset = "with_subtypes_001_novar"
+  datasets = paste0("./trimmed_results/", dataset, "/seed", 1001:1010) 
   psm_plots(dataset, datasets, name=dataset)
 }
 

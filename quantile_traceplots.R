@@ -116,9 +116,15 @@ burren_traceplots <- function(directory) {
   #dir.create(paste0(directory, "/plots/"), recursive = TRUE)
   #datasets = paste0(directory, "/trimmed_results/with_subtypes_001/seed", 1001:1010, "/")
   #quantile_traceplots_dataset("with_subtypes_001", datasets)
+  #dir.create(paste0(directory, "/plots/"), recursive = TRUE)
+  #datasets = paste0(directory, "/results/with_subtypes_noGA_001/seed", 1001:1010, "/")
+  #quantile_traceplots_dataset("with_subtypes_noGA_001", datasets)
   dir.create(paste0(directory, "/plots/"), recursive = TRUE)
-  datasets = paste0(directory, "/results/with_subtypes_noGA_001/seed", 1001:1010, "/")
-  quantile_traceplots_dataset("with_subtypes_noGA_001", datasets)
+  datasets = paste0(directory, "/trimmed_results/with_subtypes_001_novar/seed", 1001:1010, "/")
+  quantile_traceplots_dataset("with_subtypes_001_novar", datasets)
+  dir.create(paste0(directory, "/plots/"), recursive = TRUE)
+  datasets = paste0(directory, "/trimmed_results/with_subtypes_noGA_001_novar/seed", 1001:1010, "/")
+  quantile_traceplots_dataset("with_subtypes_noGA_001_novar", datasets)
 }
 
 burren_traceplots("./")
