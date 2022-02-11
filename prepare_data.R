@@ -33,3 +33,6 @@ is_complex_astle_trait = df$category.label == "ASTLE" & grepl("_p$|_p_|_sum|myel
 is_simple_below_thresh = (df$fdr.overall.below.thresh & !is_complex_astle_trait & !is_combined_trait)
 keep_dataset <- is_subtype | is_simple_below_thresh
 save_subset(keep_dataset, "with_subtypes_001")
+
+is_geneatlas = grepl("Geneatlas", df$label)
+save_subset(keep_dataset & !is_geneatlas, "with_subtypes_noGA_001")

@@ -224,6 +224,9 @@ burren_heatmaps <- function(directory) {
   datasets = paste0("./trimmed_results/", dataset, "/seed", 1001:1010) 
   psm_plots(dataset, datasets, name=dataset)
 
+  dataset = "with_subtypes_noGA_001"
+  datasets = paste0("./results/", dataset, "/seed", 1001:1010) 
+  psm_plots(dataset, datasets, name=dataset)
 }
 
 burren_heatmaps("./")
