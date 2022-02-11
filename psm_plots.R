@@ -5,6 +5,7 @@ library(mclust)
 library(ggplot2)
 library(grid)
 library(gridExtra)
+library(dplyr)
 
 adjust_labels_B_to_match_A <- function(calls_A, calls_B) {
     K_A = length(unique(calls_A))
@@ -62,11 +63,12 @@ raw_calc_psms <- function(dataset, datasets) {
     allocs=lapply(paste0(datasets, "/clusterAllocations.tsv"), fread)## read the allocations
     # This line is essential for some reason
     allocs %<>% lapply(., function(x) as.matrix(x[1:nrow(x),]))
+    trimmed_allocs = lapply(allocs, function(x) x[-c(1:(nrow(x)/2)),])
     #bigalloc = do.call(rbind, allocs)
-    bigalloc=lapply(allocs, function(x) x[-c(1:(nrow(x)/2)),]) %>% do.call("rbind",.) ## combine, discarding first 50%
+    bigalloc = trimmed_allocs %>% do.call("rbind",.) ## combine, discarding first 50%
     bigpsm=calc_psm(bigalloc,burn=0) ## make a psm, don't discard any burn in because already discarded
 
-    psms = lapply(allocs, function(x) calc_psm(x, burn=0))
+    psms = lapply(trimmed_allocs, function(x) calc_psm(x, burn=0))
     return(list(bigpsm=bigpsm, psms=psms))
 }
 
@@ -97,10 +99,14 @@ psm_plots <- function(dataset, datasets, name, focus_dataset=NULL) {
 
     annotations = get_ann_colors(calls$cl, mclust_solution$classification, obsData)
     annotations$ann$Var.PC1 = obsVars[, 1]
+
+    # Same hclust calculation that maxpear does prior to choosing optimal cut point
+    hclust.comp <- hclust(as.dist(1 - bigpsm), method = "complete")
     psm_heatmap = pheatmap(bigpsm,
                            show_rownames = TRUE,
                            show_colnames = FALSE,
-                           clustering_method = "complete",
+                           cluster_rows = hclust.comp,
+                           cluster_cols = hclust.comp,
                            annotation_names_row = FALSE,
                            treeheight_col=0,
                            fontsize_row=6,
@@ -144,9 +150,10 @@ psm_plots <- function(dataset, datasets, name, focus_dataset=NULL) {
     customColours = generate_balanced_colours(obsData)
     obs_heatmap = pheatmap(obsData,
                            clustering_method="complete",
-                           cluster_row= psm_heatmap$tree_row,
+                           cluster_rows = hclust.comp,
                            annotation_colors = annotations$colors,
                            annotation_row = annotations$ann,
+                           cluster_col = FALSE,
                            color = customColours$colours,
                            fontsize_col = 8,
                            fontsize_row = 6,
@@ -156,10 +163,10 @@ psm_plots <- function(dataset, datasets, name, focus_dataset=NULL) {
                            filename=paste0("plots/obs_heatmap_", name, ".png"))
 
     customColours = generate_balanced_colours(obsVars)
-    annotations$ann$Var.PC1 = NULL
     obs_vars_heatmap = pheatmap(obsVars,
                            clustering_method="complete",
-                           cluster_row= psm_heatmap$tree_row,
+                           cluster_rows = hclust.comp,
+                           cluster_col = FALSE,
                            annotation_colors = annotations$colors,
                            annotation_row = annotations$ann,
                            color = customColours$colours,
@@ -174,15 +181,15 @@ psm_plots <- function(dataset, datasets, name, focus_dataset=NULL) {
                                                  legend=FALSE,
                                                  color=colorRampPalette((RColorBrewer::brewer.pal(n = 7,
                                                                                                   name = "Blues")))(100),
-                                                 cluster_col = psm_heatmap$tree_row,
-                                                 cluster_row = psm_heatmap$tree_row,
+                                                 cluster_rows = hclust.comp,
+                                                 cluster_cols = hclust.comp,
                                                  treeheight_col=0,
-                                                 border_color = NULL,
+                                                 border_color = NA,
                                                  treeheight_row=0))
     heatmap_grid = grid.arrange(grobs=lapply(heatmaps, function(x) x[[4]]))
-    ggsave("plots/psm_heatmap_grid.png", heatmap_grid)
+    ggsave(paste0("plots/psm_heatmap_grid_", name, ".png"), heatmap_grid)
 
-    individual_calls = do.call(cbind, lapply(psms, function(x) adjust_labels_B_to_match_A(calls$cl, maxpear(x)$cl)))
+    individual_calls = do.call(cbind, lapply(psms, function(x) adjust_labels_B_to_match_A(calls$cl, maxpear(x, method="comp")$cl)))
     all_calls = data.frame(cbind(calls$cl, individual_calls))
     colnames(all_calls) = c("Overall", paste("Seed", 1:length(datasets)))
 
@@ -203,11 +210,11 @@ psm_plots <- function(dataset, datasets, name, focus_dataset=NULL) {
                              color = palette[1:max(all_calls)],
                              breaks = seq(0.5, max(all_calls) + 0.5, by=1),
                              cluster_col = FALSE,
-                             cluster_row = psm_heatmap$tree_row,
+                             cluster_row = hclust.comp,
                              fontsize_row = 6,
                              width=8,
                              height=14,
-                             filename="plots/calls_heatmap.png")
+                             filename=paste0("plots/calls_heatmap_", name, ".png"))
 }
 
 burren_heatmaps <- function(directory) {

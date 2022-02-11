@@ -28,7 +28,7 @@ Run dpMix on the datasets for various seeds, uses `running_dpMix.R` script and t
 ./run_all.sh
 ```
 
-To save time reading in data, we can trim the results at this stage rather than after loading. We save these trimmed versions in `trimmed_results/`. In particular we discard the first half of the run and thin the samples even more, so we take only every 10th line of the file (and thus only every 100th sample of the chain):
+To save time reading in data, we can trim the results at this stage rather than after loading. We save these trimmed versions in `trimmed_results/`. In particular we discard the first half of the run and thin the samples even more, so we take only every 10th line of the file (and thus only every 1000th sample of the chain):
 
 ```
 ./trim_datasets.sh
@@ -47,3 +47,4 @@ Rscript quantile_traceplots.R
 ```
 
 The quantile traceplots are faster and show a good overview of the distributions over time as long as quantiles are well separated from each other.
+
