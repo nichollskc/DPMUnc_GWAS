@@ -1,78 +1,11 @@
-source("process_v2_functions.R")
-library(R.cache)
-library(clue)
-library(mclust)
+source("utils.R")
+library(dplyr)
 library(ggplot2)
 library(grid)
 library(gridExtra)
-library(dplyr)
-
-adjust_labels_B_to_match_A <- function(calls_A, calls_B) {
-    K_A = length(unique(calls_A))
-    K_B = length(unique(calls_B))
-
-    if (K_A < max(calls_A)) {
-        print("WARNING: assumptions about cluster labels violated")
-    }
-    if (K_B < max(calls_B)) {
-        print("WARNING: assumptions about cluster labels violated")
-    }
-
-    jaccard_mat = matrix(0,
-                         nrow=max(K_A, K_B),
-                         ncol=max(K_A, K_B))
-    for (i in 1:K_A) {
-        for (j in 1:K_B) {
-            in_A = calls_A == i
-                in_B = calls_B == j
-                jacc = sum(in_A & in_B) / sum(in_A | in_B)
-                jaccard_mat[i, j] = jacc
-        }
-    }
-
-    new_labels_for_B = c(solve_LSAP(t(jaccard_mat), maximum=TRUE))[1:K_B]
-
-    return(plyr::mapvalues(calls_B, from=1:K_B, to=new_labels_for_B))
-}
-
-palette <- c("#77AADD", "#000000", "#9E0142", "#D53E4F", "#F46D43", "#FEE08B", "#ABDDA4", "#66C2A5", "#3288BD", "#5E4FA2", "#FDAE61", "#E6F598", "#771155", "#AA4488", "#CC99BB", "#114477", "#774411", "#EEEEEE", "#117777", "#117744", "#44AA77", "#88CCAA", "#777711", "#44AAAA", "#AAAA44", "#77CCCC", "#DDDD77", "#AA7744", "#DDAA77", "#771122", "#AA4455", "#DD7788")
-
-get_ann_colors=function(calls, mclust_calls, obsData, verbose=TRUE) {
-  # from spectral, plus some extras
-  #palette= c("#771155", "#AA4488", "#CC99BB", "#114477", "#4477AA", "#77AADD", "#117777", "#44AAAA", "#77CCCC", "#117744", "#44AA77", "#88CCAA", "#777711", "#AAAA44", "#DDDD77", "#774411", "#AA7744", "#DDAA77", "#771122", "#AA4455", "#DD7788") %>%
-#    matrix(.,7,3,byrow=TRUE) %>%
-#    as.vector()
-  counts = data.frame(table(calls))
-  cluster_labels = paste0(LETTERS[1:length(counts$Freq)], " (", counts$Freq, ")")
-
-  mclust_calls = adjust_labels_B_to_match_A(calls, mclust_calls)
-  mclust_counts = data.frame(table(mclust_calls))
-  mclust_cluster_labels = paste0(letters[1:length(mclust_counts$Freq)], " (", mclust_counts$Freq, ")")
-
-  ann=data.frame(row.names=rownames(obsData),
-                 cluster=factor(calls, labels=cluster_labels),
-                 mclust=factor(mclust_calls, labels=mclust_cluster_labels))
-  ncalls=length(unique(calls))
-  ncalls_mclust=length(unique(mclust_calls))
-  ann_colors=list(cluster = structure(palette[1:ncalls], names=cluster_labels),
-                  mclust = structure(palette[1:ncalls_mclust], names=mclust_cluster_labels))
-  list(ann=ann,colors=ann_colors)
-}
-
-raw_calc_psms <- function(dataset, datasets) {
-    allocs=lapply(paste0(datasets, "/clusterAllocations.tsv"), fread)## read the allocations
-    # This line is essential for some reason
-    allocs %<>% lapply(., function(x) as.matrix(x[1:nrow(x),]))
-    trimmed_allocs = lapply(allocs, function(x) x[-c(1:(nrow(x)/2)),])
-    #bigalloc = do.call(rbind, allocs)
-    bigalloc = trimmed_allocs %>% do.call("rbind",.) ## combine, discarding first 50%
-    bigpsm=calc_psm(bigalloc,burn=0) ## make a psm, don't discard any burn in because already discarded
-
-    psms = lapply(trimmed_allocs, function(x) calc_psm(x, burn=0))
-    return(list(bigpsm=bigpsm, psms=psms))
-}
-
-calc_psms <- addMemoization(raw_calc_psms)
+library(mcclust)
+library(mclust)
+library(pheatmap)
 
 psm_plots <- function(dataset, datasets, name, focus_dataset=NULL) {
     obsData = read.table(paste0("data/", dataset, "/beta.tsv"),
@@ -217,26 +150,20 @@ psm_plots <- function(dataset, datasets, name, focus_dataset=NULL) {
                              width=8,
                              height=14,
                              filename=paste0("plots/calls_heatmap_", name, ".png"))
+
+    return(list(name=name, bigpsm=bigpsm, calls=calls, hclust.comp=hclust.comp, mclust_calls=mclust_solution$classification))
 }
 
 burren_heatmaps <- function(directory) {
   dir.create(paste0(directory, "/plots/"), recursive = TRUE)
 
-  dataset = "with_subtypes_001"
-  datasets = paste0("./trimmed_results/", dataset, "/seed", 1001:1010) 
-#  psm_plots(dataset, datasets, name=dataset)
-
-  dataset = "with_subtypes_noGA_001"
-  datasets = paste0("./results/", dataset, "/seed", 1001:1010) 
- # psm_plots(dataset, datasets, name=dataset)
-
-  dataset = "with_subtypes_noGA_001_novar"
-  datasets = paste0("./trimmed_results/", dataset, "/seed", 1001:1010) 
-  psm_plots(dataset, datasets, name=dataset)
-
-  dataset = "with_subtypes_001_novar"
-  datasets = paste0("./trimmed_results/", dataset, "/seed", 1001:1010) 
-  psm_plots(dataset, datasets, name=dataset)
+  psm_results = list()
+  for (dataset in c("with_subtypes_001", "with_subtypes_noGA_001", "with_subtypes_noGA_001_novar", "with_subtypes_001_novar")) {
+       datasets = paste0("./trimmed_results/", dataset, "/seed", 1001:1010) 
+       result = psm_plots(dataset, datasets, name=dataset)
+       psm_results[[dataset]] = result
+  }
+  save(psm_results, file="psm_results.Rda")
 }
 
 burren_heatmaps("./")
