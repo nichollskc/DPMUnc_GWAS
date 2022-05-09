@@ -8,12 +8,17 @@ base_calls = psm_results$with_subtypes_noGA_001$calls$cl
 is_novar_dataset = sapply(psm_results, function(x) grepl("novar", x$name))
 print(is_novar_dataset)
 
+obsData = read.table(paste0("data/", "with_subtypes_noGA_001", "/beta.tsv"), header=1, row.names=1)
+dist = dist(obsData, method="euclidean")
+result = hclust(dist, method="ward.D2")
+noGA_hclustcalls = data.frame(hclust4_with_subtypes_noGA_001=adjust_labels_B_to_match_A(base_calls, cutree(result, k=4)),
+                              hclust8_with_subtypes_noGA_001=adjust_labels_B_to_match_A(base_calls, cutree(result, k=8)))
 
 noGA_calls = do.call(cbind, lapply(psm_results, function(x) adjust_labels_B_to_match_A(base_calls, x$calls$cl[names(base_calls)])))
 noGA_mclustcalls = do.call(cbind, lapply(psm_results[!is_novar_dataset], function(x) adjust_labels_B_to_match_A(base_calls, x$mclust_calls[names(base_calls)])))
 colnames(noGA_calls) = lapply(psm_results, function(x) x$name)
 colnames(noGA_mclustcalls) = lapply(psm_results[!is_novar_dataset], function(x) paste0("mclust_", x$name))
-combined_calls = data.frame(cbind(noGA_calls, noGA_mclustcalls))
+combined_calls = data.frame(cbind(noGA_calls, noGA_mclustcalls, noGA_hclustcalls))
 print(head(combined_calls))
 plot_ari_for_datasets(combined_calls, "noGA")
 
@@ -41,6 +46,8 @@ calls_heatmap = pheatmap(combined_calls,
                          width=8,
                          height=14,
                          filename=paste0("plots/all_calls_with_subtypes_noGA.png"))
+
+write.table(combined_calls, "plots/all_calls_with_subtypes_noGA.csv")
 
 base_calls = psm_results$with_subtypes_001$calls$cl
 psm_results_withGA = psm_results[sapply(psm_results, function(x) !grepl("noGA", x$name))]
