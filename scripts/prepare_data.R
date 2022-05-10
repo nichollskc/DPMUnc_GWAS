@@ -7,6 +7,12 @@ save_subset <- function(rows_to_keep, dir_name) {
   dir.create(paste0("data/", dir_name), recursive = TRUE)
   write.table(delta, file=paste0("data/", dir_name, "/beta.tsv"), sep='\t', row.names=FALSE)
   write.table(delta_var, file=paste0("data/", dir_name, "/var.tsv"), sep='\t', row.names=FALSE)
+
+  dir.create(paste0("data/", dir_name, "_novar"), recursive = TRUE)
+  write.table(delta, file=paste0("data/", dir_name, "_novar/beta.tsv"), sep='\t', row.names=FALSE)
+  no_var = delta_var
+  no_var[, 2:14] = no_var[, 2:14] * 1e-12
+  write.table(no_var, file=paste0("data/", dir_name, "_novar/var.tsv"), sep='\t', row.names=FALSE)
 }
 
 df <- read.table("13073_2020_797_MOESM6_ESM.csv", skip=1, sep=',', header=TRUE) %>%
@@ -36,3 +42,6 @@ save_subset(keep_dataset, "with_subtypes_001")
 
 is_geneatlas = grepl("Geneatlas", df$label)
 save_subset(keep_dataset & !is_geneatlas, "with_subtypes_noGA_001")
+
+is_subtypes_noGA_noblood_001 = (!is_geneatlas & df$category.label != "ASTLE" & df$category.label != "Cytokines" & !is_combined_trait & df$fdr.overall.below.thresh) | is_subtype
+save_subset(is_subtypes_noGA_noblood_001, "with_subtypes_noblood_noGA_001")

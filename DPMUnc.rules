@@ -1,0 +1,49 @@
+localrules: trim_results, traceplots
+
+SEEDS=list(range(1001,1011))
+ITERATIONS=100000000
+THINFREQ=1000
+BURN_IN=int((ITERATIONS/THINFREQ)/2)
+
+#rule all:
+#    input:
+#        expand("plots/{dataset}/trace_quantiles.png",
+#               dataset=["with_subtypes_noblood_noGA_001", "with_subtypes_noblood_noGA_001_novar"]),
+#        expand("plots/{dataset}/all_calls.rds",
+#               dataset=["with_subtypes_noblood_noGA_001", "with_subtypes_noblood_noGA_001_novar"]),
+#        expand("results/{dataset}/meanLatents.csv",
+#               dataset=["with_subtypes_noblood_noGA_001", "with_subtypes_noblood_noGA_001_novar"]),
+
+rule run_all:
+    input:
+        expand("results/{dataset}/seed{seed}/done",
+               seed=SEEDS,
+               dataset=["with_subtypes_noblood_noGA_001", "with_subtypes_noblood_noGA_001_novar"]),
+
+rule run_DPMUnc:
+    input:
+        obs="data/{dataset}/beta.tsv",
+        var="data/{dataset}/var.tsv",
+    params:
+        iterations=ITERATIONS,
+        thinningFreq=THINFREQ,
+    output:
+       touch("results/{dataset}/seed{seed}/done"),
+       #"results/{dataset}/seed{seed}/alpha.csv",
+       #"results/{dataset}/seed{seed}/K.csv",
+       #"results/{dataset}/seed{seed}/clusterAllocations.csv",
+       #"results/{dataset}/seed{seed}/pLatentsGivenClusters.csv",
+    script:
+        "scripts/running_dpMix.R"
+
+rule trim_results:
+    input:
+        "results/{dataset}/seed{seed}/{resfile}"
+    params:
+        burn_in=BURN_IN
+    output:
+        "trimmed_results/{dataset}/seed{seed}/{resfile}"
+    shell:
+        """
+        awk "NR > {params.burn_in}" {input} > {output}
+        """
