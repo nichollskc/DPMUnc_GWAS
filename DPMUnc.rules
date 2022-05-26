@@ -5,14 +5,15 @@ ITERATIONS=100000000
 THINFREQ=1000
 BURN_IN=int((ITERATIONS/THINFREQ)/2)
 
-#rule all:
-#    input:
-#        expand("plots/{dataset}/trace_quantiles.png",
-#               dataset=["with_subtypes_noblood_noGA_001", "with_subtypes_noblood_noGA_001_novar"]),
-#        expand("plots/{dataset}/all_calls.rds",
-#               dataset=["with_subtypes_noblood_noGA_001", "with_subtypes_noblood_noGA_001_novar"]),
-#        expand("results/{dataset}/meanLatents.csv",
-#               dataset=["with_subtypes_noblood_noGA_001", "with_subtypes_noblood_noGA_001_novar"]),
+rule all:
+    input:
+        "plots/with_subtypes_noblood_noGA_001/all_calls.rds",
+        expand("plots/{dataset}/trace_quantiles.png",
+               dataset=["with_subtypes_noblood_noGA_001", "with_subtypes_noblood_noGA_001_novar"]),
+        expand("plots/{dataset}/psm_data.rds",
+               dataset=["with_subtypes_noblood_noGA_001", "with_subtypes_noblood_noGA_001_novar"]),
+        expand("results/{dataset}/meanLatents.csv",
+               dataset=["with_subtypes_noblood_noGA_001", "with_subtypes_noblood_noGA_001_novar"]),
 
 rule run_all:
     input:
@@ -28,11 +29,10 @@ rule run_DPMUnc:
         iterations=ITERATIONS,
         thinningFreq=THINFREQ,
     output:
-       touch("results/{dataset}/seed{seed}/done"),
-       #"results/{dataset}/seed{seed}/alpha.csv",
-       #"results/{dataset}/seed{seed}/K.csv",
-       #"results/{dataset}/seed{seed}/clusterAllocations.csv",
-       #"results/{dataset}/seed{seed}/pLatentsGivenClusters.csv",
+       "results/{dataset}/seed{seed}/alpha.csv",
+       "results/{dataset}/seed{seed}/K.csv",
+       "results/{dataset}/seed{seed}/clusterAllocations.csv",
+       "results/{dataset}/seed{seed}/pLatentsGivenClusters.csv",
     script:
         "scripts/running_dpMix.R"
 
@@ -47,3 +47,53 @@ rule trim_results:
         """
         awk "NR > {params.burn_in}" {input} > {output}
         """
+
+rule mean_latents:
+    input:
+        "data/{dataset}/beta.tsv",
+        expand("trimmed_results/{{dataset}}/seed{seed}/latentObservations.csv",
+               seed=SEEDS),
+    output:
+        df="results/{dataset}/meanLatents.csv",
+    script:
+        "scripts/calc_mean_latents.R"
+
+rule traceplots:
+    input:
+        expand("results/{{dataset}}/seed{seed}/{resfile}",
+               seed=SEEDS,
+               resfile=["alpha.csv", "pLatentsGivenClusters.csv", "K.csv"])
+    params:
+        dataset_folders=expand("results/{{dataset}}/seed{seed}/", seed=SEEDS)
+    output:
+        "plots/{dataset}/trace_medians.png",
+        "plots/{dataset}/trace_quantiles.png",
+    script:
+        "scripts/traceplots.R"
+
+rule psm_plots:
+    input:
+        expand("trimmed_results/{{dataset}}/seed{seed}/clusterAllocations.csv",
+               seed=SEEDS),
+        obs="data/{dataset}/beta.tsv",
+        var="data/{dataset}/var.tsv",
+    params:
+        dataset_folders=expand("trimmed_results/{{dataset}}/seed{seed}/", seed=SEEDS)
+    output:
+        "plots/{dataset}/psm_heatmap.png",
+        "plots/{dataset}/obs_heatmap.png",
+        "plots/{dataset}/obs_vars_heatmap.png",
+        result="plots/{dataset}/psm_data.rds",
+    script:
+        "scripts/psm_plots.R"
+
+rule compare_calls:
+    input:
+        expand("plots/{dataset}/psm_data.rds",
+               dataset=["with_subtypes_noblood_noGA_001", "with_subtypes_noblood_noGA_001_novar"]),
+        obs="data/with_subtypes_noblood_noGA_001/beta.tsv",
+        var="data/with_subtypes_noblood_noGA_001/var.tsv",
+    output:
+        "plots/with_subtypes_noblood_noGA_001/all_calls.rds",
+    script:
+        "scripts/compare_calls.R"
